@@ -1,0 +1,32 @@
+<table class="table table-striped table-hover">
+  <thead class="table-dark">
+    <tr>
+      <th><i class="bi bi-person"></i> Usuario</th>
+      <th><i class="bi bi-server"></i> Usuario Servidor</th>
+      <th><i class="bi bi-hdd"></i> Servidor</th>
+      <th><i class="bi bi-folder"></i> Carpetas</th>
+      <th><i class="bi bi-laptop"></i> Equipo</th>
+      <th><i class="bi bi-pc-display"></i> Marca</th>
+      <th><i class="bi bi-card-text"></i> Modelo</th>
+      <th><i class="bi bi-upc-scan"></i> Nº Serie</th>
+      <th><i class="bi bi-hash"></i> Nº Económico</th>
+      <th><i class="bi bi-wifi"></i> MAC</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in inventario %}
+    <tr>
+      <td>{{ item.nombre_usuario }}</td>
+      <td>{{ item.usuario_servidor }}</td>
+      <td>{{ item.servidor }}</td>
+      <td>{{ item.carpetas }}</td>
+      <td>{{ item.equipo }}</td>
+      <td>{{ item.marca }}</td>
+      <td>{{ item.modelo }}</td>
+      <td>{{ item.numero_serie }}</td>
+      <td>{{ item.numero_economico }}</td>
+      <td>{{ item.mac }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

@@ -1,0 +1,62 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2><i class="bi bi-speedometer2"></i> Dashboard de Inventario</h2>
+  <hr>
+
+  <!-- Botón Agregar -->
+  <button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#modalAdd">
+    <i class="bi bi-plus-circle"></i> Agregar Inventario
+  </button>
+
+  <!-- Exportar -->
+  <a href="{{ url_for('export_excel') }}" class="btn btn-outline-primary mb-3"><i class="bi bi-file-earmark-excel"></i> Excel</a>
+  <a href="{{ url_for('export_pdf') }}" class="btn btn-outline-danger mb-3"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+
+  <!-- Tabla -->
+  <div id="tabla-inventario">
+    {% include 'tabla_inventario.html' %}
+  </div>
+</div>
+
+<!-- Modal Agregar Inventario -->
+<div class="modal fade" id="modalAdd" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{{ url_for('add') }}">
+        <div class="modal-header">
+          <h5 class="modal-title">Agregar Inventario</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" name="nombre_usuario" class="form-control mb-2" placeholder="Nombre del usuario" required>
+          <input type="text" name="usuario_servidor" class="form-control mb-2" placeholder="Usuario del servidor" required>
+          <input type="text" name="servidor" class="form-control mb-2" placeholder="Servidor" required>
+          <input type="text" name="carpetas" class="form-control mb-2" placeholder="Carpetas visibles" required>
+          <input type="text" name="equipo" class="form-control mb-2" placeholder="Equipo (CPU)" required>
+          <input type="text" name="marca" class="form-control mb-2" placeholder="Marca" required>
+          <input type="text" name="modelo" class="form-control mb-2" placeholder="Modelo" required>
+          <input type="text" name="numero_serie" class="form-control mb-2" placeholder="Número de serie" required>
+          <input type="text" name="numero_economico" class="form-control mb-2" placeholder="Número económico" required>
+          <input type="text" name="mac" class="form-control mb-2" placeholder="MAC" required>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button class="btn btn-success">Agregar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- AJAX para refrescar tabla cada 5 segundos -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+function refrescarTabla() {
+  $("#tabla-inventario").load("{{ url_for('tabla_inventario') }}");
+}
+
+// Refrescar cada 5 segundos
+setInterval(refrescarTabla, 5000);
+</script>
+{% endblock %}
