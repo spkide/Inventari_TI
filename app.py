@@ -18,6 +18,7 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
 
+    # Tabla usuarios
     conn.execute('''
         CREATE TABLE IF NOT EXISTS usuarios(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,11 +27,11 @@ def init_db():
         )
     ''')
 
+    # Tabla inventario (base)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS inventario(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre_usuario TEXT,
-            correo_usuario TEXT,
             usuario_servidor TEXT,
             servidor TEXT,
             carpetas TEXT,
@@ -43,9 +44,15 @@ def init_db():
         )
     ''')
 
+    # ---- MIGRACIÓN: agregar correo si no existe ----
+    columnas = [c[1] for c in conn.execute("PRAGMA table_info(inventario)").fetchall()]
+    if 'correo_usuario' not in columnas:
+        conn.execute("ALTER TABLE inventario ADD COLUMN correo_usuario TEXT")
+
+    # Usuario admin por defecto
     conn.execute(
         'INSERT OR IGNORE INTO usuarios(username,password) VALUES (?,?)',
-        ('admin','admin123')
+        ('admin', 'admin123')
     )
 
     conn.commit()
