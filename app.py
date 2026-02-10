@@ -40,8 +40,10 @@ def init_db():
             mac TEXT
         )
     ''')
-    # Usuario demo
-    conn.execute('INSERT OR IGNORE INTO usuarios(username,password) VALUES (?,?)', ('admin','admin123'))
+    conn.execute(
+        'INSERT OR IGNORE INTO usuarios(username,password) VALUES (?,?)',
+        ('admin','admin123')
+    )
     conn.commit()
     conn.close()
 
@@ -50,17 +52,23 @@ def init_db():
 # ----------------------
 @app.route('/', methods=['GET','POST'])
 def login():
-    if request.method=='POST':
+    if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         conn = get_db_connection()
-        user = conn.execute('SELECT * FROM usuarios WHERE username=? AND password=?', (username,password)).fetchone()
+        user = conn.execute(
+            'SELECT * FROM usuarios WHERE username=? AND password=?',
+            (username, password)
+        ).fetchone()
         conn.close()
+
         if user:
             session['user'] = username
             flash(f'¡Bienvenido, {username}!', 'success')
             return redirect(url_for('dashboard'))
+
         return render_template('login.html', error="Usuario o contraseña incorrectos")
+
     return render_template('login.html')
 
 # ----------------------
@@ -68,18 +76,23 @@ def login():
 # ----------------------
 @app.route('/register', methods=['GET','POST'])
 def register():
-    if request.method=='POST':
+    if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         conn = get_db_connection()
         try:
-            conn.execute('INSERT INTO usuarios(username,password) VALUES (?,?)', (username,password))
+            conn.execute(
+                'INSERT INTO usuarios(username,password) VALUES (?,?)',
+                (username, password)
+            )
             conn.commit()
-            conn.close()
-            flash('Usuario creado correctamente, ahora ingresa con tu cuenta', 'success')
+            flash('Usuario creado correctamente', 'success')
             return redirect(url_for('login'))
         except:
             return render_template('register.html', error="Usuario ya existe")
+        finally:
+            conn.close()
+
     return render_template('register.html')
 
 # ----------------------
@@ -88,14 +101,13 @@ def register():
 @app.route('/dashboard')
 def dashboard():
     if 'user' not in session:
-        flash('Debes iniciar sesión primero', 'warning')
         return redirect(url_for('login'))
+
     conn = get_db_connection()
     inventario = conn.execute('SELECT * FROM inventario').fetchall()
-    marcas = conn.execute('SELECT marca, COUNT(*) as count FROM inventario GROUP BY marca').fetchall()
-    servidores = conn.execute('SELECT servidor, COUNT(*) as count FROM inventario GROUP BY servidor').fetchall()
     conn.close()
-    return render_template('dashboard.html', inventario=inventario, marcas=marcas, servidores=servidores)
+
+    return render_template('dashboard.html', inventario=inventario)
 
 # ----------------------
 # Agregar inventario
@@ -103,12 +115,14 @@ def dashboard():
 @app.route('/add', methods=['POST'])
 def add():
     if 'user' not in session:
-        flash('Debes iniciar sesión primero', 'warning')
         return redirect(url_for('login'))
+
     data = request.form
     conn = get_db_connection()
     conn.execute('''
-        INSERT INTO inventario(nombre_usuario,usuario_servidor,servidor,carpetas,equipo,marca,modelo,numero_serie,numero_economico,mac)
+        INSERT INTO inventario
+        (nombre_usuario,usuario_servidor,servidor,carpetas,equipo,marca,modelo,
+         numero_serie,numero_economico,mac)
         VALUES (?,?,?,?,?,?,?,?,?,?)
     ''', (
         data['nombre_usuario'],
@@ -124,7 +138,75 @@ def add():
     ))
     conn.commit()
     conn.close()
+
     flash('Inventario agregado correctamente', 'success')
+    return redirect(url_for('dashboard'))
+
+# ----------------------
+# EDITAR
+# ----------------------
+@app.route('/edit/<int:id>', methods=['GET','POST'])
+def edit(id):
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+
+    if request.method == 'POST':
+        data = request.form
+        conn.execute('''
+            UPDATE inventario SET
+            nombre_usuario=?,
+            usuario_servidor=?,
+            servidor=?,
+            carpetas=?,
+            equipo=?,
+            marca=?,
+            modelo=?,
+            numero_serie=?,
+            numero_economico=?,
+            mac=?
+            WHERE id=?
+        ''', (
+            data['nombre_usuario'],
+            data['usuario_servidor'],
+            data['servidor'],
+            data['carpetas'],
+            data['equipo'],
+            data['marca'],
+            data['modelo'],
+            data['numero_serie'],
+            data['numero_economico'],
+            data['mac'],
+            id
+        ))
+        conn.commit()
+        conn.close()
+        flash('Registro actualizado', 'success')
+        return redirect(url_for('dashboard'))
+
+    item = conn.execute(
+        'SELECT * FROM inventario WHERE id=?',
+        (id,)
+    ).fetchone()
+    conn.close()
+
+    return render_template('edit.html', item=item)
+
+# ----------------------
+# ELIMINAR
+# ----------------------
+@app.route('/delete/<int:id>')
+def delete(id):
+    if 'user' not in session:
+        return redirect(url_for('login'))
+
+    conn = get_db_connection()
+    conn.execute('DELETE FROM inventario WHERE id=?', (id,))
+    conn.commit()
+    conn.close()
+
+    flash('Registro eliminado', 'success')
     return redirect(url_for('dashboard'))
 
 # ----------------------
@@ -135,45 +217,21 @@ def export_excel():
     conn = get_db_connection()
     df = pd.read_sql_query("SELECT * FROM inventario", conn)
     conn.close()
+
     output = BytesIO()
     df.to_excel(output, index=False)
     output.seek(0)
-    return send_file(output, download_name="inventario.xlsx", as_attachment=True)
 
-# ----------------------
-# Exportar PDF
-# ----------------------
-@app.route('/export/pdf')
-def export_pdf():
-    conn = get_db_connection()
-    df = pd.read_sql_query("SELECT * FROM inventario", conn)
-    conn.close()
-    html = df.to_html(index=False)
-    pdf_path = 'inventario.pdf'
-    pdfkit.from_string(html, pdf_path)
-    return send_file(pdf_path, as_attachment=True)
+    return send_file(output, download_name="inventario.xlsx", as_attachment=True)
 
 # ----------------------
 # Logout
 # ----------------------
 @app.route('/logout')
 def logout():
-    user = session.get('user', 'Usuario')
     session.pop('user', None)
-    flash(f'¡Que tengas un buen día, {user}! Inicia sesión nuevamente o regístrate.', 'success')
+    flash('Sesión cerrada correctamente', 'success')
     return redirect(url_for('login'))
-
-# ----------------------
-# Tabla de inventario para AJAX (refresco automático)
-# ----------------------
-@app.route('/tabla_inventario')
-def tabla_inventario():
-    if 'user' not in session:
-        return ""  # No mostrar nada si no hay sesión
-    conn = get_db_connection()
-    inventario = conn.execute('SELECT * FROM inventario').fetchall()
-    conn.close()
-    return render_template('tabla_inventario.html', inventario=inventario)
 
 if __name__ == '__main__':
     init_db()

@@ -1,4 +1,4 @@
-<!-- BUSCADOR -->
+<!-- ================== BUSCADOR ================== -->
 <div class="mb-3">
   <input type="text" id="buscador" class="form-control"
          placeholder="🔍 Buscar inventario...">
@@ -10,25 +10,37 @@
     <thead class="table-dark">
       <tr>
         <th>Usuario</th>
+        <th>Usuario Servidor</th>
         <th>Correo</th>
         <th>Servidor</th>
+        <th>Carpetas</th>
         <th>Equipo</th>
-        <th>Serie</th>
+        <th>Marca</th>
+        <th>Modelo</th>
+        <th>N° Serie</th>
+        <th>N° Económico</th>
         <th>MAC</th>
         <th class="text-center">Acciones</th>
       </tr>
     </thead>
+
     <tbody id="tablaBody">
       {% for item in inventario %}
       <tr>
         <td>{{ item.nombre_usuario }}</td>
+        <td>{{ item.usuario_servidor }}</td>
         <td>{{ item.correo_usuario }}</td>
         <td>{{ item.servidor }}</td>
+        <td>{{ item.carpetas }}</td>
         <td>{{ item.equipo }}</td>
+        <td>{{ item.marca }}</td>
+        <td>{{ item.modelo }}</td>
         <td>{{ item.numero_serie }}</td>
+        <td>{{ item.numero_economico }}</td>
         <td>{{ item.mac }}</td>
         <td class="text-center">
-          <a href="{{ url_for('edit', id=item.id) }}" class="btn btn-sm btn-warning">
+          <a href="{{ url_for('edit', id=item.id) }}"
+             class="btn btn-sm btn-warning">
             <i class="bi bi-pencil"></i>
           </a>
           <a href="{{ url_for('delete', id=item.id) }}"
@@ -43,11 +55,11 @@
   </table>
 </div>
 
-<!-- ================== MODO MÓVIL ACORDEÓN ================== -->
+<!-- ================== MODO MÓVIL (ACORDEÓN) ================== -->
 <div class="d-md-none" id="cardsMobile">
   {% for item in inventario %}
   <div class="card mb-2 inventario-card">
-    <div class="card-header d-flex justify-content-between"
+    <div class="card-header d-flex justify-content-between align-items-center"
          data-bs-toggle="collapse"
          data-bs-target="#item{{ item.id }}">
       <strong><i class="bi bi-person"></i> {{ item.nombre_usuario }}</strong>
@@ -57,13 +69,18 @@
     <div class="collapse" id="item{{ item.id }}">
       <div class="card-body small">
         <p><i class="bi bi-envelope"></i> {{ item.correo_usuario }}</p>
+        <p><i class="bi bi-person-badge"></i> {{ item.usuario_servidor }}</p>
         <p><i class="bi bi-server"></i> {{ item.servidor }}</p>
+        <p><i class="bi bi-folder"></i> {{ item.carpetas }}</p>
         <p><i class="bi bi-laptop"></i> {{ item.equipo }}</p>
+        <p><i class="bi bi-pc-display"></i> {{ item.marca }} - {{ item.modelo }}</p>
         <p><i class="bi bi-upc-scan"></i> {{ item.numero_serie }}</p>
+        <p><i class="bi bi-hash"></i> {{ item.numero_economico }}</p>
         <p><i class="bi bi-wifi"></i> {{ item.mac }}</p>
 
         <div class="d-flex gap-2 mt-2">
-          <a href="{{ url_for('edit', id=item.id) }}" class="btn btn-warning btn-sm w-50">
+          <a href="{{ url_for('edit', id=item.id) }}"
+             class="btn btn-warning btn-sm w-50">
             <i class="bi bi-pencil"></i> Editar
           </a>
           <a href="{{ url_for('delete', id=item.id) }}"
@@ -78,19 +95,19 @@
   {% endfor %}
 </div>
 
-<!-- ================== JS BUSCADOR ================== -->
+<!-- ================== BUSCADOR JS ================== -->
 <script>
 document.getElementById("buscador").addEventListener("keyup", function () {
   let filtro = this.value.toLowerCase();
 
-  // Tabla
+  // Desktop
   document.querySelectorAll("#tablaBody tr").forEach(row => {
     row.style.display = row.innerText.toLowerCase().includes(filtro)
       ? ""
       : "none";
   });
 
-  // Cards
+  // Mobile
   document.querySelectorAll(".inventario-card").forEach(card => {
     card.style.display = card.innerText.toLowerCase().includes(filtro)
       ? ""
@@ -105,12 +122,16 @@ document.getElementById("buscador").addEventListener("keyup", function () {
   .table {
     color: #fff;
   }
+  .table-dark {
+    background-color: #1f1f1f;
+  }
   .card {
     background-color: #1e1e1e;
     color: #fff;
   }
   .card-header {
     background-color: #2a2a2a;
+    color: #fff;
   }
 }
 </style>
