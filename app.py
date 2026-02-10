@@ -2,7 +2,6 @@ from flask import Flask, render_template, request, redirect, url_for, session, s
 import sqlite3
 import pandas as pd
 from io import BytesIO
-import pdfkit
 
 app = Flask(__name__)
 app.secret_key = 'supersecret123'
@@ -18,17 +17,20 @@ def get_db_connection():
 
 def init_db():
     conn = get_db_connection()
+
     conn.execute('''
         CREATE TABLE IF NOT EXISTS usuarios(
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE,
             password TEXT
         )
     ''')
+
     conn.execute('''
         CREATE TABLE IF NOT EXISTS inventario(
-            id INTEGER PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre_usuario TEXT,
+            correo_usuario TEXT,
             usuario_servidor TEXT,
             servidor TEXT,
             carpetas TEXT,
@@ -40,21 +42,24 @@ def init_db():
             mac TEXT
         )
     ''')
+
     conn.execute(
         'INSERT OR IGNORE INTO usuarios(username,password) VALUES (?,?)',
         ('admin','admin123')
     )
+
     conn.commit()
     conn.close()
 
 # ----------------------
-# Login
+# LOGIN
 # ----------------------
 @app.route('/', methods=['GET','POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+
         conn = get_db_connection()
         user = conn.execute(
             'SELECT * FROM usuarios WHERE username=? AND password=?',
@@ -64,7 +69,6 @@ def login():
 
         if user:
             session['user'] = username
-            flash(f'¡Bienvenido, {username}!', 'success')
             return redirect(url_for('dashboard'))
 
         return render_template('login.html', error="Usuario o contraseña incorrectos")
@@ -72,13 +76,14 @@ def login():
     return render_template('login.html')
 
 # ----------------------
-# Registro
+# REGISTER
 # ----------------------
 @app.route('/register', methods=['GET','POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+
         conn = get_db_connection()
         try:
             conn.execute(
@@ -86,7 +91,6 @@ def register():
                 (username, password)
             )
             conn.commit()
-            flash('Usuario creado correctamente', 'success')
             return redirect(url_for('login'))
         except:
             return render_template('register.html', error="Usuario ya existe")
@@ -96,7 +100,7 @@ def register():
     return render_template('register.html')
 
 # ----------------------
-# Dashboard
+# DASHBOARD
 # ----------------------
 @app.route('/dashboard')
 def dashboard():
@@ -110,40 +114,40 @@ def dashboard():
     return render_template('dashboard.html', inventario=inventario)
 
 # ----------------------
-# Agregar inventario
+# ADD
 # ----------------------
 @app.route('/add', methods=['POST'])
 def add():
     if 'user' not in session:
         return redirect(url_for('login'))
 
-    data = request.form
+    d = request.form
     conn = get_db_connection()
     conn.execute('''
         INSERT INTO inventario
-        (nombre_usuario,usuario_servidor,servidor,carpetas,equipo,marca,modelo,
-         numero_serie,numero_economico,mac)
-        VALUES (?,?,?,?,?,?,?,?,?,?)
+        (nombre_usuario, correo_usuario, usuario_servidor, servidor, carpetas,
+         equipo, marca, modelo, numero_serie, numero_economico, mac)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?)
     ''', (
-        data['nombre_usuario'],
-        data['usuario_servidor'],
-        data['servidor'],
-        data['carpetas'],
-        data['equipo'],
-        data['marca'],
-        data['modelo'],
-        data['numero_serie'],
-        data['numero_economico'],
-        data['mac']
+        d['nombre_usuario'],
+        d['correo_usuario'],
+        d['usuario_servidor'],
+        d['servidor'],
+        d['carpetas'],
+        d['equipo'],
+        d['marca'],
+        d['modelo'],
+        d['numero_serie'],
+        d['numero_economico'],
+        d['mac']
     ))
     conn.commit()
     conn.close()
 
-    flash('Inventario agregado correctamente', 'success')
     return redirect(url_for('dashboard'))
 
 # ----------------------
-# EDITAR
+# EDIT
 # ----------------------
 @app.route('/edit/<int:id>', methods=['GET','POST'])
 def edit(id):
@@ -153,10 +157,11 @@ def edit(id):
     conn = get_db_connection()
 
     if request.method == 'POST':
-        data = request.form
+        d = request.form
         conn.execute('''
             UPDATE inventario SET
             nombre_usuario=?,
+            correo_usuario=?,
             usuario_servidor=?,
             servidor=?,
             carpetas=?,
@@ -168,21 +173,21 @@ def edit(id):
             mac=?
             WHERE id=?
         ''', (
-            data['nombre_usuario'],
-            data['usuario_servidor'],
-            data['servidor'],
-            data['carpetas'],
-            data['equipo'],
-            data['marca'],
-            data['modelo'],
-            data['numero_serie'],
-            data['numero_economico'],
-            data['mac'],
+            d['nombre_usuario'],
+            d['correo_usuario'],
+            d['usuario_servidor'],
+            d['servidor'],
+            d['carpetas'],
+            d['equipo'],
+            d['marca'],
+            d['modelo'],
+            d['numero_serie'],
+            d['numero_economico'],
+            d['mac'],
             id
         ))
         conn.commit()
         conn.close()
-        flash('Registro actualizado', 'success')
         return redirect(url_for('dashboard'))
 
     item = conn.execute(
@@ -194,7 +199,7 @@ def edit(id):
     return render_template('edit.html', item=item)
 
 # ----------------------
-# ELIMINAR
+# DELETE
 # ----------------------
 @app.route('/delete/<int:id>')
 def delete(id):
@@ -206,11 +211,10 @@ def delete(id):
     conn.commit()
     conn.close()
 
-    flash('Registro eliminado', 'success')
     return redirect(url_for('dashboard'))
 
 # ----------------------
-# Exportar Excel
+# EXPORT EXCEL
 # ----------------------
 @app.route('/export/excel')
 def export_excel():
@@ -225,14 +229,14 @@ def export_excel():
     return send_file(output, download_name="inventario.xlsx", as_attachment=True)
 
 # ----------------------
-# Logout
+# LOGOUT
 # ----------------------
 @app.route('/logout')
 def logout():
     session.pop('user', None)
-    flash('Sesión cerrada correctamente', 'success')
     return redirect(url_for('login'))
 
+# ----------------------
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
