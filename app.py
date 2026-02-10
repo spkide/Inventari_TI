@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, send_file, flash
+from flask import Flask, render_template, request, redirect, url_for, session, send_file
 import sqlite3
 import pandas as pd
 from io import BytesIO
@@ -19,15 +19,15 @@ def init_db():
     conn = get_db_connection()
 
     conn.execute('''
-        CREATE TABLE IF NOT EXISTS usuarios(
+        CREATE TABLE IF NOT EXISTS usuarios (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            password TEXT
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
         )
     ''')
 
     conn.execute('''
-        CREATE TABLE IF NOT EXISTS inventario(
+        CREATE TABLE IF NOT EXISTS inventario (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre_usuario TEXT,
             correo_usuario TEXT,
@@ -44,7 +44,7 @@ def init_db():
     ''')
 
     conn.execute(
-        'INSERT OR IGNORE INTO usuarios(username,password) VALUES (?,?)',
+        'INSERT OR IGNORE INTO usuarios (username, password) VALUES (?,?)',
         ('admin', 'admin123')
     )
 
@@ -57,8 +57,8 @@ def init_db():
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form['username']
+        password = request.form['password']
 
         conn = get_db_connection()
         user = conn.execute(
@@ -71,7 +71,7 @@ def login():
             session['user'] = username
             return redirect(url_for('dashboard'))
 
-        return render_template('login.html', error="Usuario o contraseña incorrectos")
+        return render_template('login.html', error='Credenciales incorrectas')
 
     return render_template('login.html')
 
@@ -81,19 +81,16 @@ def login():
 @app.route('/register', methods=['GET','POST'])
 def register():
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-
         conn = get_db_connection()
         try:
             conn.execute(
-                'INSERT INTO usuarios(username,password) VALUES (?,?)',
-                (username, password)
+                'INSERT INTO usuarios (username,password) VALUES (?,?)',
+                (request.form['username'], request.form['password'])
             )
             conn.commit()
             return redirect(url_for('login'))
         except:
-            return render_template('register.html', error="Usuario ya existe")
+            return render_template('register.html', error='Usuario ya existe')
         finally:
             conn.close()
 
@@ -122,25 +119,25 @@ def add():
         return redirect(url_for('login'))
 
     f = request.form
-
     conn = get_db_connection()
     conn.execute('''
-        INSERT INTO inventario
-        (nombre_usuario, correo_usuario, usuario_servidor, servidor, carpetas,
-         equipo, marca, modelo, numero_serie, numero_economico, mac)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?)
+        INSERT INTO inventario (
+            nombre_usuario, correo_usuario, usuario_servidor, servidor,
+            carpetas, equipo, marca, modelo,
+            numero_serie, numero_economico, mac
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?)
     ''', (
-        f.get('nombre_usuario'),
-        f.get('correo_usuario'),
-        f.get('usuario_servidor'),
-        f.get('servidor'),
-        f.get('carpetas'),
-        f.get('equipo'),
-        f.get('marca'),
-        f.get('modelo'),
-        f.get('numero_serie'),
-        f.get('numero_economico'),
-        f.get('mac')
+        f['nombre_usuario'],
+        f['correo_usuario'],
+        f['usuario_servidor'],
+        f['servidor'],
+        f['carpetas'],
+        f['equipo'],
+        f['marca'],
+        f['modelo'],
+        f['numero_serie'],
+        f['numero_economico'],
+        f['mac']
     ))
     conn.commit()
     conn.close()
@@ -174,17 +171,17 @@ def edit(id):
             mac=?
             WHERE id=?
         ''', (
-            f.get('nombre_usuario'),
-            f.get('correo_usuario'),
-            f.get('usuario_servidor'),
-            f.get('servidor'),
-            f.get('carpetas'),
-            f.get('equipo'),
-            f.get('marca'),
-            f.get('modelo'),
-            f.get('numero_serie'),
-            f.get('numero_economico'),
-            f.get('mac'),
+            f['nombre_usuario'],
+            f['correo_usuario'],
+            f['usuario_servidor'],
+            f['servidor'],
+            f['carpetas'],
+            f['equipo'],
+            f['marca'],
+            f['modelo'],
+            f['numero_serie'],
+            f['numero_economico'],
+            f['mac'],
             id
         ))
         conn.commit()
@@ -192,8 +189,7 @@ def edit(id):
         return redirect(url_for('dashboard'))
 
     item = conn.execute(
-        'SELECT * FROM inventario WHERE id=?',
-        (id,)
+        'SELECT * FROM inventario WHERE id=?', (id,)
     ).fetchone()
     conn.close()
 
@@ -220,14 +216,14 @@ def delete(id):
 @app.route('/export/excel')
 def export_excel():
     conn = get_db_connection()
-    df = pd.read_sql_query("SELECT * FROM inventario", conn)
+    df = pd.read_sql_query('SELECT * FROM inventario', conn)
     conn.close()
 
     output = BytesIO()
     df.to_excel(output, index=False)
     output.seek(0)
 
-    return send_file(output, download_name="inventario.xlsx", as_attachment=True)
+    return send_file(output, download_name='inventario.xlsx', as_attachment=True)
 
 # ======================
 # LOGOUT
