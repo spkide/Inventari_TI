@@ -7,9 +7,9 @@ app = Flask(__name__)
 app.secret_key = 'supersecret123'
 DB = 'database.db'
 
-# ----------------------
+# ======================
 # DB
-# ----------------------
+# ======================
 def get_db_connection():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
@@ -18,7 +18,6 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
 
-    # Tabla usuarios
     conn.execute('''
         CREATE TABLE IF NOT EXISTS usuarios(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -27,11 +26,11 @@ def init_db():
         )
     ''')
 
-    # Tabla inventario (base)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS inventario(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre_usuario TEXT,
+            correo_usuario TEXT,
             usuario_servidor TEXT,
             servidor TEXT,
             carpetas TEXT,
@@ -44,12 +43,6 @@ def init_db():
         )
     ''')
 
-    # ---- MIGRACIÓN: agregar correo si no existe ----
-    columnas = [c[1] for c in conn.execute("PRAGMA table_info(inventario)").fetchall()]
-    if 'correo_usuario' not in columnas:
-        conn.execute("ALTER TABLE inventario ADD COLUMN correo_usuario TEXT")
-
-    # Usuario admin por defecto
     conn.execute(
         'INSERT OR IGNORE INTO usuarios(username,password) VALUES (?,?)',
         ('admin', 'admin123')
@@ -58,14 +51,14 @@ def init_db():
     conn.commit()
     conn.close()
 
-# ----------------------
+# ======================
 # LOGIN
-# ----------------------
-@app.route('/', methods=['GET','POST'])
+# ======================
+@app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username')
+        password = request.form.get('password')
 
         conn = get_db_connection()
         user = conn.execute(
@@ -82,14 +75,14 @@ def login():
 
     return render_template('login.html')
 
-# ----------------------
+# ======================
 # REGISTER
-# ----------------------
+# ======================
 @app.route('/register', methods=['GET','POST'])
 def register():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username')
+        password = request.form.get('password')
 
         conn = get_db_connection()
         try:
@@ -106,9 +99,9 @@ def register():
 
     return render_template('register.html')
 
-# ----------------------
+# ======================
 # DASHBOARD
-# ----------------------
+# ======================
 @app.route('/dashboard')
 def dashboard():
     if 'user' not in session:
@@ -120,15 +113,16 @@ def dashboard():
 
     return render_template('dashboard.html', inventario=inventario)
 
-# ----------------------
+# ======================
 # ADD
-# ----------------------
+# ======================
 @app.route('/add', methods=['POST'])
 def add():
     if 'user' not in session:
         return redirect(url_for('login'))
 
-    d = request.form
+    f = request.form
+
     conn = get_db_connection()
     conn.execute('''
         INSERT INTO inventario
@@ -136,26 +130,26 @@ def add():
          equipo, marca, modelo, numero_serie, numero_economico, mac)
         VALUES (?,?,?,?,?,?,?,?,?,?,?)
     ''', (
-        d['nombre_usuario'],
-        d['correo_usuario'],
-        d['usuario_servidor'],
-        d['servidor'],
-        d['carpetas'],
-        d['equipo'],
-        d['marca'],
-        d['modelo'],
-        d['numero_serie'],
-        d['numero_economico'],
-        d['mac']
+        f.get('nombre_usuario'),
+        f.get('correo_usuario'),
+        f.get('usuario_servidor'),
+        f.get('servidor'),
+        f.get('carpetas'),
+        f.get('equipo'),
+        f.get('marca'),
+        f.get('modelo'),
+        f.get('numero_serie'),
+        f.get('numero_economico'),
+        f.get('mac')
     ))
     conn.commit()
     conn.close()
 
     return redirect(url_for('dashboard'))
 
-# ----------------------
+# ======================
 # EDIT
-# ----------------------
+# ======================
 @app.route('/edit/<int:id>', methods=['GET','POST'])
 def edit(id):
     if 'user' not in session:
@@ -164,7 +158,7 @@ def edit(id):
     conn = get_db_connection()
 
     if request.method == 'POST':
-        d = request.form
+        f = request.form
         conn.execute('''
             UPDATE inventario SET
             nombre_usuario=?,
@@ -180,17 +174,17 @@ def edit(id):
             mac=?
             WHERE id=?
         ''', (
-            d['nombre_usuario'],
-            d['correo_usuario'],
-            d['usuario_servidor'],
-            d['servidor'],
-            d['carpetas'],
-            d['equipo'],
-            d['marca'],
-            d['modelo'],
-            d['numero_serie'],
-            d['numero_economico'],
-            d['mac'],
+            f.get('nombre_usuario'),
+            f.get('correo_usuario'),
+            f.get('usuario_servidor'),
+            f.get('servidor'),
+            f.get('carpetas'),
+            f.get('equipo'),
+            f.get('marca'),
+            f.get('modelo'),
+            f.get('numero_serie'),
+            f.get('numero_economico'),
+            f.get('mac'),
             id
         ))
         conn.commit()
@@ -205,9 +199,9 @@ def edit(id):
 
     return render_template('edit.html', item=item)
 
-# ----------------------
+# ======================
 # DELETE
-# ----------------------
+# ======================
 @app.route('/delete/<int:id>')
 def delete(id):
     if 'user' not in session:
@@ -220,9 +214,9 @@ def delete(id):
 
     return redirect(url_for('dashboard'))
 
-# ----------------------
+# ======================
 # EXPORT EXCEL
-# ----------------------
+# ======================
 @app.route('/export/excel')
 def export_excel():
     conn = get_db_connection()
@@ -235,15 +229,15 @@ def export_excel():
 
     return send_file(output, download_name="inventario.xlsx", as_attachment=True)
 
-# ----------------------
+# ======================
 # LOGOUT
-# ----------------------
+# ======================
 @app.route('/logout')
 def logout():
     session.pop('user', None)
     return redirect(url_for('login'))
 
-# ----------------------
+# ======================
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
